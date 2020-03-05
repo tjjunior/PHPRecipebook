@@ -15,6 +15,45 @@ class RecipesController extends AppController {
             'Recipe.name' => 'asc'
         )
     );
+	
+	public $paginatewithimages = array(
+        'contain' =>array(
+            'Attachment' =>array('fields' => array(
+                'attachment',
+                'dir'
+            )),
+            'Review'=>array('fields' => array(
+                'rating'
+            ))
+        ),
+        'fields' => array (
+            'Recipe.name',
+            'BaseType.name',
+            'Recipe.comments',
+            'Course.name',
+            'User.id',
+            'User.username',
+            'User.name',
+            'Attachment.attachment',
+            'Attachment.dir',
+            'AVG(Review_user.rating) AS AverageRating'
+        ),
+        'group' => array('Recipe.name',
+            'BaseType.name',
+            'Recipe.comments',
+            'Course.name',
+            'User.id',
+            'User.username',
+            'User.name',
+            'Attachment.attachment',
+            //'Attachment.dir'
+            'Attachment.dir'),
+        'paramType' => 'querystring',
+        'limit' => 24,
+        'maxLimit' => 100,
+        'order' => array(
+            'Recipe.name' => 'asc',
+        ));
     
     // Filter to hide recipes of other users
     public $filterConditions = array();
@@ -136,7 +175,9 @@ class RecipesController extends AppController {
                         'fields' => array('name', 'id')
                     ),
                     'Image',
-                    'Review'
+                    'Review' => array(
+                        'fields' => array('rating','comments')
+                    )
                 ));
         
         $recipe = $this->Recipe->find('first', $options);
@@ -295,6 +336,26 @@ class RecipesController extends AppController {
             ));
             $this->set('recipes', $results);       
         }
+    }
+	
+	function index_with_images() {
+        $this->Recipe->recursive = 0;
+        $this->Recipe->Behaviors->load('Containable');
+        $this->paginate = array(
+            'Recipe' => array(
+                // 'conditions' => array('Applicant.approved' => true),
+                'joins' => array(
+                    array(
+                        'table' => 'attachments',
+                        'alias' => 'Image',
+                        'type' => 'left outer',
+                        'conditions' => array('Recipe.id = Image.recipe_id')
+                    )
+                )
+                // 'order' => array('Applicant.joined DESC')
+            )
+        );
+        $this->set('recipes', $this->paginate());
     }
 
 }
